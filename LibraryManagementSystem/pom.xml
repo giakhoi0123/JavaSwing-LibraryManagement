@@ -84,7 +84,7 @@
                 </configuration>
             </plugin>
             
-            <!-- Maven Shade Plugin (Create Fat JAR) -->
+            <!-- Maven Shade Plugin (Create Fat JAR with all dependencies) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -101,6 +101,17 @@
                                     <mainClass>com.library.main.Main</mainClass>
                                 </transformer>
                             </transformers>
+                            <finalName>LibraryManagementSystem</finalName>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
                         </configuration>
                     </execution>
                 </executions>
