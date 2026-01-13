@@ -1,10 +1,12 @@
 package com.library.main;
 
-import com.formdev.flatlaf.FlatLightLaf;
-import com.library.view.LoginDialog;
-import com.library.util.DBConnection;
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 
-import javax.swing.*;
+import com.formdev.flatlaf.FlatLightLaf;
+import com.library.util.DBConnection;
+import com.library.view.LoginDialog;
 
 /**
  * Main Application Entry Point
@@ -16,6 +18,10 @@ import javax.swing.*;
 public class Main {
     
     public static void main(String[] args) {
+        // Set UTF-8 encoding - MUST be first
+        System.setProperty("file.encoding", "UTF-8");
+        System.setProperty("sun.jnu.encoding", "UTF-8");
+        
         // Set FlatLaf Look and Feel
         try {
             // Use FlatLightLaf for light theme (can change to FlatDarkLaf for dark theme)
@@ -25,6 +31,10 @@ public class Main {
             UIManager.put("Button.arc", 10); // Rounded buttons
             UIManager.put("Component.arc", 10); // Rounded components
             UIManager.put("TextComponent.arc", 10); // Rounded text fields
+            
+            // Force UTF-8 for UI components
+            UIManager.put("OptionPane.messageFont", new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, 14));
+            UIManager.put("OptionPane.buttonFont", new java.awt.Font("Segoe UI", java.awt.Font.PLAIN, 12));
             
             System.out.println("✓ FlatLaf Look and Feel loaded successfully");
             

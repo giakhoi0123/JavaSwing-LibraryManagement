@@ -1,10 +1,32 @@
 package com.library.view;
 
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Image;
+import java.awt.Insets;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+
+import javax.swing.BorderFactory;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
+
 import com.library.dao.StaffDAO;
 import com.library.model.Staff;
-import java.awt.*;
-import java.awt.event.*;
-import javax.swing.*;
 
 /**
  * Login Dialog
@@ -27,6 +49,15 @@ public class LoginDialog extends JDialog {
     public LoginDialog(Frame parent) {
         super(parent, "Đăng Nhập - Library Management System", true);
         staffDAO = new StaffDAO();
+        
+        // Set favicon
+        try {
+            ImageIcon icon = new ImageIcon(getClass().getClassLoader().getResource("logo.png"));
+            setIconImage(icon.getImage());
+        } catch (Exception e) {
+            // Icon not found
+        }
+        
         initComponents();
         setupLayout();
         attachListeners();
@@ -60,9 +91,19 @@ public class LoginDialog extends JDialog {
         setLayout(new BorderLayout(10, 10));
         
         // Header Panel
-        JPanel headerPanel = new JPanel();
+        JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 15));
         headerPanel.setBackground(new Color(33, 150, 243));
-        headerPanel.setPreferredSize(new Dimension(450, 80));
+        headerPanel.setPreferredSize(new Dimension(450, 100));
+        
+        // Logo
+        try {
+            ImageIcon originalIcon = new ImageIcon(getClass().getClassLoader().getResource("logo.png"));
+            Image scaledImage = originalIcon.getImage().getScaledInstance(60, 60, Image.SCALE_SMOOTH);
+            JLabel logoLabel = new JLabel(new ImageIcon(scaledImage));
+            headerPanel.add(logoLabel);
+        } catch (Exception e) {
+            // Fallback to emoji if logo not found
+        }
         
         JLabel lblTitle = new JLabel("LIBRARY MANAGEMENT SYSTEM");
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));

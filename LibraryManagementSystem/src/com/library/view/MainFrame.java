@@ -5,13 +5,16 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.Image;
 import java.sql.SQLException;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -61,6 +64,14 @@ public class MainFrame extends JFrame {
         setSize(1200, 700);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+        
+        // Set favicon
+        try {
+            ImageIcon icon = new ImageIcon(getClass().getClassLoader().getResource("logo.png"));
+            setIconImage(icon.getImage());
+        } catch (Exception e) {
+            // Icon not found
+        }
         
         initComponents();
         setupLayout();
@@ -142,15 +153,29 @@ public class MainFrame extends JFrame {
         topPanel.setPreferredSize(new Dimension(1200, 60));
         topPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
         
+        // Left side - Logo + Title
+        JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        leftPanel.setBackground(new Color(33, 150, 243));
+        
+        try {
+            ImageIcon originalIcon = new ImageIcon(getClass().getClassLoader().getResource("logo.png"));
+            Image scaledImage = originalIcon.getImage().getScaledInstance(40, 40, Image.SCALE_SMOOTH);
+            JLabel logoLabel = new JLabel(new ImageIcon(scaledImage));
+            leftPanel.add(logoLabel);
+        } catch (Exception e) {
+            // Logo not found, skip
+        }
+        
         JLabel lblTitle = new JLabel("LIBRARY MANAGEMENT SYSTEM");
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
         lblTitle.setForeground(Color.WHITE);
+        leftPanel.add(lblTitle);
         
         lblWelcome = new JLabel("Xin chào, " + currentStaff.getHoTen() + " (" + currentStaff.getRole() + ")");
         lblWelcome.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblWelcome.setForeground(Color.WHITE);
         
-        topPanel.add(lblTitle, BorderLayout.WEST);
+        topPanel.add(leftPanel, BorderLayout.WEST);
         topPanel.add(lblWelcome, BorderLayout.EAST);
         
         // Sidebar Panel (Menu)
@@ -159,6 +184,21 @@ public class MainFrame extends JFrame {
         sidebarPanel.setBackground(new Color(37, 37, 38));
         sidebarPanel.setPreferredSize(new Dimension(220, 640));
         sidebarPanel.setBorder(BorderFactory.createEmptyBorder(20, 10, 20, 10));
+        
+        // Logo at top of sidebar
+        JPanel logoPanel = new JPanel();
+        logoPanel.setBackground(new Color(37, 37, 38));
+        logoPanel.setMaximumSize(new Dimension(200, 70));
+        try {
+            ImageIcon originalIcon = new ImageIcon(getClass().getClassLoader().getResource("logo.png"));
+            Image scaledImage = originalIcon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
+            JLabel logoLabel = new JLabel(new ImageIcon(scaledImage));
+            logoPanel.add(logoLabel);
+            sidebarPanel.add(logoPanel);
+            sidebarPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+        } catch (Exception e) {
+            // Logo not found, skip
+        }
         
         sidebarPanel.add(btnDashboard);
         sidebarPanel.add(Box.createRigidArea(new Dimension(0, 10)));
