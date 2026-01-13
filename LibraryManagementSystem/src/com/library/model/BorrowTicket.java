@@ -83,6 +83,14 @@ public class BorrowTicket {
         return hanTra;
     }
     
+    /**
+     * Alias for getHanTra() - return date
+     * @return the return deadline date
+     */
+    public LocalDate getNgayHenTra() {
+        return hanTra;
+    }
+    
     public void setHanTra(LocalDate hanTra) {
         this.hanTra = hanTra;
     }

@@ -7,6 +7,7 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.sql.SQLException;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -18,10 +19,11 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 
-import com.library.dao.*;
+import com.library.dao.BookDAO;
+import com.library.dao.BorrowDAO;
+import com.library.dao.ReaderDAO;
+import com.library.dao.TicketFineDAO;
 import com.library.model.Staff;
-
-import java.sql.SQLException;
 
 /**
  * Main Application Frame
@@ -46,6 +48,12 @@ public class MainFrame extends JFrame {
     private JButton btnStaff;
     private JButton btnLogout;
     
+    // Colors for menu
+    private final Color MENU_DEFAULT_COLOR = new Color(66, 66, 66);
+    private final Color MENU_SELECTED_COLOR = new Color(33, 150, 243);
+    private final Color MENU_HOVER_COLOR = new Color(80, 80, 80);
+    private JButton currentSelectedButton;
+    
     public MainFrame(Staff staff) {
         this.currentStaff = staff;
         
@@ -63,15 +71,15 @@ public class MainFrame extends JFrame {
     }
     
     private void initComponents() {
-        // Sidebar menu buttons
-        btnDashboard = createMenuButton("📊 Trang Chủ", new Color(33, 150, 243));
-        btnBooks = createMenuButton("📚 Quản Lý Sách", new Color(76, 175, 80));
-        btnReaders = createMenuButton("👥 Quản Lý Độc Giả", new Color(255, 152, 0));
-        btnBorrow = createMenuButton("📖 Mượn/Trả Sách", new Color(156, 39, 176));
-        btnFines = createMenuButton("💰 Quản Lý Phạt", new Color(220, 53, 69));
-        btnStatistics = createMenuButton("📈 Thống Kê", new Color(0, 150, 136));
-        btnStaff = createMenuButton("👨‍💼 Quản Lý Nhân Viên", new Color(96, 125, 139));
-        btnLogout = createMenuButton("🚪 Đăng Xuất", new Color(244, 67, 54));
+        // Sidebar menu buttons - all with same color initially
+        btnDashboard = createMenuButton("📊 Trang Chủ");
+        btnBooks = createMenuButton("📚 Quản Lý Sách");
+        btnReaders = createMenuButton("👥 Quản Lý Độc Giả");
+        btnBorrow = createMenuButton("📖 Mượn/Trả Sách");
+        btnFines = createMenuButton("💰 Quản Lý Phạt");
+        btnStatistics = createMenuButton("📈 Thống Kê");
+        btnStaff = createMenuButton("👨‍💼 Quản Lý Nhân Viên");
+        btnLogout = createMenuButton("🚪 Đăng Xuất");
         
         // Check permissions
         if (!currentStaff.isAdmin()) {
@@ -83,10 +91,10 @@ public class MainFrame extends JFrame {
         contentPanel.setBackground(Color.WHITE);
     }
     
-    private JButton createMenuButton(String text, Color color) {
+    private JButton createMenuButton(String text) {
         JButton button = new JButton(text);
         button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        button.setBackground(color);
+        button.setBackground(MENU_DEFAULT_COLOR);
         button.setForeground(Color.WHITE);
         button.setFocusPainted(false);
         button.setBorderPainted(false);
@@ -98,14 +106,31 @@ public class MainFrame extends JFrame {
         // Hover effect
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
-                button.setBackground(color.darker());
+                if (button != currentSelectedButton) {
+                    button.setBackground(MENU_HOVER_COLOR);
+                }
             }
             public void mouseExited(java.awt.event.MouseEvent evt) {
-                button.setBackground(color);
+                if (button != currentSelectedButton) {
+                    button.setBackground(MENU_DEFAULT_COLOR);
+                }
             }
         });
         
         return button;
+    }
+    
+    private void setSelectedButton(JButton button) {
+        // Reset previous selected button
+        if (currentSelectedButton != null) {
+            currentSelectedButton.setBackground(MENU_DEFAULT_COLOR);
+        }
+        
+        // Set new selected button
+        currentSelectedButton = button;
+        if (currentSelectedButton != null) {
+            currentSelectedButton.setBackground(MENU_SELECTED_COLOR);
+        }
     }
     
     private void setupLayout() {
@@ -163,13 +188,34 @@ public class MainFrame extends JFrame {
     }
     
     private void attachListeners() {
-        btnDashboard.addActionListener(e -> showDashboard());
-        btnBooks.addActionListener(e -> showBookManagement());
-        btnReaders.addActionListener(e -> showReaderManagement());
-        btnBorrow.addActionListener(e -> showBorrowReturn());
-        btnFines.addActionListener(e -> showFineManagement());
-        btnStatistics.addActionListener(e -> showStatistics());
-        btnStaff.addActionListener(e -> showStaffManagement());
+        btnDashboard.addActionListener(e -> {
+            setSelectedButton(btnDashboard);
+            showDashboard();
+        });
+        btnBooks.addActionListener(e -> {
+            setSelectedButton(btnBooks);
+            showBookManagement();
+        });
+        btnReaders.addActionListener(e -> {
+            setSelectedButton(btnReaders);
+            showReaderManagement();
+        });
+        btnBorrow.addActionListener(e -> {
+            setSelectedButton(btnBorrow);
+            showBorrowReturn();
+        });
+        btnFines.addActionListener(e -> {
+            setSelectedButton(btnFines);
+            showFineManagement();
+        });
+        btnStatistics.addActionListener(e -> {
+            setSelectedButton(btnStatistics);
+            showStatistics();
+        });
+        btnStaff.addActionListener(e -> {
+            setSelectedButton(btnStaff);
+            showStaffManagement();
+        });
         
         btnLogout.addActionListener(e -> {
             int confirm = JOptionPane.showConfirmDialog(this,

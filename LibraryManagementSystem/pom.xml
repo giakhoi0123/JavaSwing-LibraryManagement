@@ -61,6 +61,20 @@
             <artifactId>poi-ooxml</artifactId>
             <version>5.2.5</version>
         </dependency>
+        
+        <!-- JCalendar - Date Picker -->
+        <dependency>
+            <groupId>com.toedter</groupId>
+            <artifactId>jcalendar</artifactId>
+            <version>1.4</version>
+        </dependency>
+        
+        <!-- iText PDF - for PDF export -->
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>itextpdf</artifactId>
+            <version>5.5.13.3</version>
+        </dependency>
     
       <dependency>
         <groupId>com.google.android</groupId>
@@ -84,6 +98,22 @@
                 </configuration>
             </plugin>
             
+            <!-- Maven Exec Plugin (Run with UTF-8 encoding) -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <mainClass>com.library.main.Main</mainClass>
+                    <systemProperties>
+                        <systemProperty>
+                            <key>file.encoding</key>
+                            <value>UTF-8</value>
+                        </systemProperty>
+                    </systemProperties>
+                </configuration>
+            </plugin>
+            
             <!-- Maven Shade Plugin (Create Fat JAR with all dependencies) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -99,6 +129,10 @@
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>com.library.main.Main</mainClass>
+                                    <manifestEntries>
+                                        <Class-Path>.</Class-Path>
+                                        <Implementation-Version>${project.version}</Implementation-Version>
+                                    </manifestEntries>
                                 </transformer>
                             </transformers>
                             <finalName>LibraryManagementSystem</finalName>

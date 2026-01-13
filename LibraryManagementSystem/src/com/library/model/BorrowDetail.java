@@ -87,6 +87,14 @@ public class BorrowDetail {
         this.viTri = viTri;
     }
     
+    /**
+     * Get quantity borrowed (always 1 per detail)
+     * @return 1 as each borrow detail represents one book
+     */
+    public int getSoLuongMuon() {
+        return 1;
+    }
+    
     @Override
     public String toString() {
         return String.format("[%s] %s - %s", maSach, tenSach, tinhTrangLucMuon);

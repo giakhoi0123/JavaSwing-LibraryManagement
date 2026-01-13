@@ -23,6 +23,7 @@ public class Staff {
     private String role;
     private String trangThai;
     private LocalDate createdAt;
+    private Permission permission;
     
     // Constructors
     public Staff() {
@@ -140,6 +141,14 @@ public class Staff {
         this.createdAt = createdAt;
     }
     
+    public Permission getPermission() {
+        return permission;
+    }
+    
+    public void setPermission(Permission permission) {
+        this.permission = permission;
+    }
+    
     // Business methods
     public boolean isAdmin() {
         return "Admin".equals(role);
@@ -151,6 +160,42 @@ public class Staff {
     
     public boolean isActive() {
         return "Active".equals(trangThai);
+    }
+    
+    /**
+     * Check if staff has specific permission
+     */
+    public boolean hasPermission(String permissionType) {
+        if (isAdmin()) {
+            return true; // Admin has all permissions
+        }
+        
+        if (permission == null) {
+            return false;
+        }
+        
+        switch (permissionType) {
+            case Permission.MANAGE_BOOKS:
+                return permission.isCanManageBooks();
+            case Permission.MANAGE_READERS:
+                return permission.isCanManageReaders();
+            case Permission.MANAGE_BORROW:
+                return permission.isCanManageBorrow();
+            case Permission.MANAGE_RETURN:
+                return permission.isCanManageReturn();
+            case Permission.MANAGE_FINES:
+                return permission.isCanManageFines();
+            case Permission.MANAGE_STAFF:
+                return permission.isCanManageStaff();
+            case Permission.VIEW_STATISTICS:
+                return permission.isCanViewStatistics();
+            case Permission.EXPORT_DATA:
+                return permission.isCanExportData();
+            case Permission.IMPORT_DATA:
+                return permission.isCanImportData();
+            default:
+                return false;
+        }
     }
     
     @Override
