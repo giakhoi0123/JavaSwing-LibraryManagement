@@ -215,6 +215,15 @@ public class StaffManagementPanel extends JPanel {
                 tableModel.addRow(row);
             }
             
+            // Clear filters and refresh display
+            txtSearch.setText("");
+            cmbRoleFilter.setSelectedIndex(0);
+            rowSorter.setRowFilter(null);
+            
+            tableModel.fireTableDataChanged();
+            tblStaff.revalidate();
+            tblStaff.repaint();
+            
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this,
                 "Lỗi khi tải dữ liệu: " + ex.getMessage(),
@@ -261,20 +270,7 @@ public class StaffManagementPanel extends JPanel {
         dialog.setVisible(true);
         
         if (dialog.isConfirmed()) {
-            Staff newStaff = dialog.getStaff();
-            try {
-                staffDAO.insertStaff(newStaff);
-                JOptionPane.showMessageDialog(this,
-                    "Thêm nhân viên thành công!",
-                    "Thành Công",
-                    JOptionPane.INFORMATION_MESSAGE);
-                loadStaffData();
-            } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this,
-                    "Lỗi khi thêm nhân viên: " + ex.getMessage(),
-                    "Lỗi",
-                    JOptionPane.ERROR_MESSAGE);
-            }
+            loadStaffData();
         }
     }
     
@@ -292,12 +288,6 @@ public class StaffManagementPanel extends JPanel {
                 dialog.setVisible(true);
                 
                 if (dialog.isConfirmed()) {
-                    Staff updatedStaff = dialog.getStaff();
-                    staffDAO.updateStaff(updatedStaff);
-                    JOptionPane.showMessageDialog(this,
-                        "Cập nhật nhân viên thành công!",
-                        "Thành Công",
-                        JOptionPane.INFORMATION_MESSAGE);
                     loadStaffData();
                 }
             }

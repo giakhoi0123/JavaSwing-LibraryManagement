@@ -264,7 +264,16 @@ public class BookManagementPanel extends JPanel {
                 tableModel.addRow(row);
             }
             
+            // Clear filters and refresh display
+            txtSearch.setText("");
+            cmbCategoryFilter.setSelectedIndex(0);
+            chkAvailableOnly.setSelected(false);
+            rowSorter.setRowFilter(null);
+            
             updateStatus();
+            tableModel.fireTableDataChanged();
+            tblBooks.revalidate();
+            tblBooks.repaint();
             
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this,
@@ -371,20 +380,7 @@ public class BookManagementPanel extends JPanel {
         dialog.setVisible(true);
         
         if (dialog.isConfirmed()) {
-            Book newBook = dialog.getBook();
-            try {
-                bookDAO.insertBook(newBook);
-                JOptionPane.showMessageDialog(this,
-                    "Thêm sách thành công!",
-                    "Thành Công",
-                    JOptionPane.INFORMATION_MESSAGE);
-                loadBooksData();
-            } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this,
-                    "Lỗi khi thêm sách: " + ex.getMessage(),
-                    "Lỗi",
-                    JOptionPane.ERROR_MESSAGE);
-            }
+            loadBooksData();
         }
     }
     
@@ -402,12 +398,6 @@ public class BookManagementPanel extends JPanel {
                 dialog.setVisible(true);
                 
                 if (dialog.isConfirmed()) {
-                    Book updatedBook = dialog.getBook();
-                    bookDAO.updateBook(updatedBook);
-                    JOptionPane.showMessageDialog(this,
-                        "Cập nhật sách thành công!",
-                        "Thành Công",
-                        JOptionPane.INFORMATION_MESSAGE);
                     loadBooksData();
                 }
             }

@@ -8,6 +8,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Window;
+import java.sql.SQLException;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -19,8 +20,9 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
+import com.library.dao.StaffDAO;
 import com.library.model.Staff;
-
+import com.library.util.ValidationUtil;
 /**
  * Dialog for Adding/Editing Staff
  */
@@ -28,6 +30,7 @@ public class StaffDialog extends JDialog {
     
     private Staff staff;
     private boolean confirmed = false;
+    private StaffDAO staffDAO;
     
     private JTextField txtMaNV;
     private JTextField txtHoTen;
@@ -45,6 +48,7 @@ public class StaffDialog extends JDialog {
     public StaffDialog(Window owner, Staff staff) {
         super(owner, staff == null ? "Thêm Nhân Viên Mới" : "Sửa Thông Tin Nhân Viên", ModalityType.APPLICATION_MODAL);
         this.staff = staff;
+        this.staffDAO = new StaffDAO();
         
         setSize(450, 550);
         setLocationRelativeTo(owner);
@@ -56,6 +60,8 @@ public class StaffDialog extends JDialog {
         
         if (staff != null) {
             populateFields();
+            txtMaNV.setEditable(false); // Không cho sửa mã khi edit
+            txtUsername.setEditable(false); // Không cho sửa username khi edit
         }
     }
     
@@ -191,30 +197,103 @@ public class StaffDialog extends JDialog {
     }
     
     private void saveStaff() {
-        // Validation
+        // Validation đầy đủ
+        
+        // 1. Mã nhân viên
         if (txtMaNV.getText().trim().isEmpty()) {
             JOptionPane.showMessageDialog(this, "Vui lòng nhập mã nhân viên!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            txtMaNV.requestFocus();
             return;
         }
         
+        if (!txtMaNV.getText().trim().matches("^NV\\d{3,}$")) {
+            JOptionPane.showMessageDialog(this, "Mã nhân viên phải theo định dạng NVXXX (VD: NV001)!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            txtMaNV.requestFocus();
+            return;
+        }
+        
+        // 2. Họ tên
         if (txtHoTen.getText().trim().isEmpty()) {
             JOptionPane.showMessageDialog(this, "Vui lòng nhập họ tên!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            txtHoTen.requestFocus();
             return;
         }
         
+        if (txtHoTen.getText().trim().length() < 2) {
+            JOptionPane.showMessageDialog(this, "Họ tên phải có ít nhất 2 ký tự!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            txtHoTen.requestFocus();
+            return;
+        }
+        
+        // 3. Số điện thoại (bắt buộc)
         if (txtSoDT.getText().trim().isEmpty()) {
             JOptionPane.showMessageDialog(this, "Vui lòng nhập số điện thoại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            txtSoDT.requestFocus();
             return;
         }
         
+        if (!ValidationUtil.isValidPhoneNumber(txtSoDT.getText().trim())) {
+            JOptionPane.showMessageDialog(this, 
+                "Số điện thoại không hợp lệ! Phải có 10 số và bắt đầu bằng 0.", 
+                "Lỗi", 
+                JOptionPane.ERROR_MESSAGE);
+            txtSoDT.requestFocus();
+            return;
+        }
+        
+        // 4. Email (tùy chọn nhưng nếu có thì phải đúng format)
+        if (!txtEmail.getText().trim().isEmpty() && !ValidationUtil.isValidEmail(txtEmail.getText().trim())) {
+            JOptionPane.showMessageDialog(this, 
+                "Email không hợp lệ! Phải theo định dạng: example@domain.com", 
+                "Lỗi", 
+                JOptionPane.ERROR_MESSAGE);
+            txtEmail.requestFocus();
+            return;
+        }
+        
+        // 5. Chức vụ
+        if (txtChucVu.getText().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Vui lòng nhập chức vụ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            txtChucVu.requestFocus();
+            return;
+        }
+        
+        // 6. Username
         if (txtUsername.getText().trim().isEmpty()) {
             JOptionPane.showMessageDialog(this, "Vui lòng nhập username!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            txtUsername.requestFocus();
             return;
         }
         
+        if (txtUsername.getText().trim().length() < 4) {
+            JOptionPane.showMessageDialog(this, "Username phải có ít nhất 4 ký tự!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            txtUsername.requestFocus();
+            return;
+        }
+        
+        if (!txtUsername.getText().trim().matches("^[a-zA-Z0-9_]+$")) {
+            JOptionPane.showMessageDialog(this, 
+                "Username chỉ được chứa chữ, số và dấu gạch dưới!", 
+                "Lỗi", 
+                JOptionPane.ERROR_MESSAGE);
+            txtUsername.requestFocus();
+            return;
+        }
+        
+        // 7. Password (bắt buộc khi thêm mới)
         String password = new String(txtPassword.getPassword());
         if (staff == null && password.trim().isEmpty()) {
             JOptionPane.showMessageDialog(this, "Vui lòng nhập mật khẩu!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            txtPassword.requestFocus();
+            return;
+        }
+        
+        if (!password.trim().isEmpty() && password.length() < 6) {
+            JOptionPane.showMessageDialog(this, 
+                "Mật khẩu phải có ít nhất 6 ký tự!", 
+                "Lỗi", 
+                JOptionPane.ERROR_MESSAGE);
+            txtPassword.requestFocus();
             return;
         }
         
@@ -237,8 +316,64 @@ public class StaffDialog extends JDialog {
         staff.setRole((String) cmbRole.getSelectedItem());
         staff.setTrangThai((String) cmbTrangThai.getSelectedItem());
         
-        confirmed = true;
-        dispose();
+        // Save to database
+        boolean isNewStaff = (staff.getPassword() != null || !password.trim().isEmpty());
+        try {
+            if (staff.getMaNV() == null || staffDAO.getStaffById(staff.getMaNV()) == null) {
+                // Insert new staff
+                staffDAO.insertStaff(staff);
+                JOptionPane.showMessageDialog(this,
+                    "Thêm nhân viên thành công!",
+                    "Thành Công",
+                    JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                // Update existing staff
+                staffDAO.updateStaff(staff);
+                JOptionPane.showMessageDialog(this,
+                    "Cập nhật nhân viên thành công!",
+                    "Thành Công",
+                    JOptionPane.INFORMATION_MESSAGE);
+            }
+            
+            confirmed = true;
+            dispose();
+            
+        } catch (SQLException ex) {
+            String errorMsg = ex.getMessage();
+            
+            // Xử lý các lỗi phổ biến
+            if (errorMsg.contains("Duplicate entry")) {
+                if (errorMsg.contains("PRIMARY")) {
+                    JOptionPane.showMessageDialog(this,
+                        "Mã nhân viên '" + staff.getMaNV() + "' đã tồn tại!\n" +
+                        "Vui lòng nhập mã khác.",
+                        "Lỗi Trùng Mã",
+                        JOptionPane.ERROR_MESSAGE);
+                    txtMaNV.requestFocus();
+                    txtMaNV.selectAll();
+                } else if (errorMsg.contains("username")) {
+                    JOptionPane.showMessageDialog(this,
+                        "Username '" + staff.getUsername() + "' đã tồn tại!\n" +
+                        "Vui lòng chọn username khác.",
+                        "Lỗi Trùng Username",
+                        JOptionPane.ERROR_MESSAGE);
+                    txtUsername.requestFocus();
+                    txtUsername.selectAll();
+                } else {
+                    JOptionPane.showMessageDialog(this,
+                        "Dữ liệu bị trùng: " + errorMsg,
+                        "Lỗi",
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                JOptionPane.showMessageDialog(this,
+                    "Lỗi khi lưu nhân viên:\n" + errorMsg,
+                    "Lỗi Database",
+                    JOptionPane.ERROR_MESSAGE);
+            }
+            
+            // KHÔNG dispose() - giữ dialog mở để user có thể sửa
+        }
     }
     
     public boolean isConfirmed() {

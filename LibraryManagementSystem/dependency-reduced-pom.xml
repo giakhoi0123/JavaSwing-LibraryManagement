@@ -8,6 +8,14 @@
   <description>Library Management System with Java Swing and FlatLaf</description>
   <build>
     <sourceDirectory>src</sourceDirectory>
+    <resources>
+      <resource>
+        <directory>src/resources</directory>
+        <includes>
+          <include>**/*</include>
+        </includes>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -16,6 +24,30 @@
           <source>17</source>
           <target>17</target>
           <encoding>UTF-8</encoding>
+          <compilerArgs>
+            <arg>-J-Dfile.encoding=UTF-8</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.1.0</version>
+        <configuration>
+          <mainClass>com.library.main.Main</mainClass>
+          <arguments>
+            <argument>-Dfile.encoding=UTF-8</argument>
+          </arguments>
+          <systemProperties>
+            <systemProperty>
+              <key>file.encoding</key>
+              <value>UTF-8</value>
+            </systemProperty>
+            <systemProperty>
+              <key>sun.jnu.encoding</key>
+              <value>UTF-8</value>
+            </systemProperty>
+          </systemProperties>
         </configuration>
       </plugin>
       <plugin>
@@ -31,8 +63,23 @@
               <transformers>
                 <transformer>
                   <mainClass>com.library.main.Main</mainClass>
+                  <manifestEntries>
+                    <Class-Path>.</Class-Path>
+                    <Implementation-Version>${project.version}</Implementation-Version>
+                  </manifestEntries>
                 </transformer>
               </transformers>
+              <finalName>LibraryManagementSystem</finalName>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
             </configuration>
           </execution>
         </executions>

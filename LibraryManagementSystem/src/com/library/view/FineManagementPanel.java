@@ -185,6 +185,15 @@ public class FineManagementPanel extends JPanel {
                 tableModel.addRow(row);
             }
             
+            // Clear filters and refresh display
+            txtSearch.setText("");
+            cmbStatus.setSelectedIndex(0);
+            sorter.setRowFilter(null);
+            
+            tableModel.fireTableDataChanged();
+            tblFines.revalidate();
+            tblFines.repaint();
+            
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this,
                 "Lỗi khi tải danh sách phạt: " + ex.getMessage(),

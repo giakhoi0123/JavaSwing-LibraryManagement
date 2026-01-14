@@ -24,6 +24,7 @@ import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 
 import com.library.dao.AuthorDAO;
+import com.library.dao.BookDAO;
 import com.library.dao.CategoryDAO;
 import com.library.dao.PublisherDAO;
 import com.library.model.Book;
@@ -37,6 +38,7 @@ public class BookDialog extends JDialog {
     private boolean confirmed = false;
     
     // DAOs
+    private BookDAO bookDAO;
     private AuthorDAO authorDAO;
     private CategoryDAO categoryDAO;
     private PublisherDAO publisherDAO;
@@ -59,6 +61,7 @@ public class BookDialog extends JDialog {
     public BookDialog(Window owner, Book book) {
         super(owner, book == null ? "Thêm Sách Mới" : "Sửa Thông Tin Sách", ModalityType.APPLICATION_MODAL);
         this.book = book;
+        this.bookDAO = new BookDAO();
         this.authorDAO = new AuthorDAO();
         this.categoryDAO = new CategoryDAO();
         this.publisherDAO = new PublisherDAO();
@@ -73,6 +76,7 @@ public class BookDialog extends JDialog {
         
         if (book != null) {
             populateFields();
+            txtMaSach.setEditable(false); // Không cho sửa mã sách khi edit
         }
     }
     
@@ -116,11 +120,12 @@ public class BookDialog extends JDialog {
             // Load authors
             Map<String, String> authors = authorDAO.getAllAuthors();
             DefaultComboBoxModel<String> authorModel = new DefaultComboBoxModel<>();
-            authorModel.addElement("-- Chọn tác giả --");
+            authorModel.addElement("-- Nhập tên tác giả --");
             for (Map.Entry<String, String> entry : authors.entrySet()) {
-                authorModel.addElement(entry.getKey() + " - " + entry.getValue());
+                authorModel.addElement(entry.getValue()); // Chỉ hiển thị tên
             }
             cboMaTG.setModel(authorModel);
+            cboMaTG.setEditable(true); // Cho phép nhập tên mới
             
             // Load categories
             Map<String, String> categories = categoryDAO.getAllCategories();
@@ -170,17 +175,17 @@ public class BookDialog extends JDialog {
         gbc.gridx = 1;
         formPanel.add(txtTenSach, gbc);
         
-        // Row 2: Mã Tác Giả
+        // Row 2: Thể Loại (đổi lên trên)
         gbc.gridx = 0; gbc.gridy = 2;
-        formPanel.add(new JLabel("Tác Giả:"), gbc);
-        gbc.gridx = 1;
-        formPanel.add(cboMaTG, gbc);
-        
-        // Row 3: Mã Thể Loại
-        gbc.gridx = 0; gbc.gridy = 3;
         formPanel.add(new JLabel("Thể Loại:"), gbc);
         gbc.gridx = 1;
         formPanel.add(cboMaTheLoai, gbc);
+        
+        // Row 3: Tác Giả (nhập tên, tự động tạo mã)
+        gbc.gridx = 0; gbc.gridy = 3;
+        formPanel.add(new JLabel("Tác Giả:"), gbc);
+        gbc.gridx = 1;
+        formPanel.add(cboMaTG, gbc);
         
         // Row 4: Mã NXB
         gbc.gridx = 0; gbc.gridy = 4;
@@ -232,14 +237,16 @@ public class BookDialog extends JDialog {
         txtMaSach.setText(book.getMaSach());
         txtTenSach.setText(book.getTenSach());
         
-        // Set combo box selections
+        // Set author name (editable combobox)
         if (book.getMaTG() != null && !book.getMaTG().isEmpty()) {
-            for (int i = 0; i < cboMaTG.getItemCount(); i++) {
-                String item = cboMaTG.getItemAt(i);
-                if (item.startsWith(book.getMaTG() + " -")) {
-                    cboMaTG.setSelectedIndex(i);
-                    break;
+            try {
+                Map<String, String> authors = authorDAO.getAllAuthors();
+                String authorName = authors.get(book.getMaTG());
+                if (authorName != null) {
+                    cboMaTG.setSelectedItem(authorName);
                 }
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
         }
         
@@ -283,17 +290,99 @@ public class BookDialog extends JDialog {
         return null;
     }
     
+    /**
+     * Get author ID, auto-create if not exists
+     */
+    private String getAuthorId() throws SQLException {
+        String authorName = (String) cboMaTG.getSelectedItem();
+        if (authorName == null || authorName.trim().isEmpty() || authorName.startsWith("--")) {
+            return null;
+        }
+        
+        // Remove prefix if exists (for existing authors)
+        authorName = authorName.trim();
+        
+        // Auto-create author if not exists
+        return authorDAO.createAuthorIfNotExists(authorName);
+    }
+    
     private void saveBook() {
-        // Validation
+        // Validation đầy đủ tất cả các trường
+        
+        // 1. Mã sách
         if (txtMaSach.getText().trim().isEmpty()) {
             JOptionPane.showMessageDialog(this, "Vui lòng nhập mã sách!", "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
             txtMaSach.requestFocus();
             return;
         }
         
+        if (!txtMaSach.getText().trim().matches("^S\\d{3,}$")) {
+            JOptionPane.showMessageDialog(this, "Mã sách phải theo định dạng SXXX (VD: S001)!", "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
+            txtMaSach.requestFocus();
+            return;
+        }
+        
+        // 2. Tên sách
         if (txtTenSach.getText().trim().isEmpty()) {
             JOptionPane.showMessageDialog(this, "Vui lòng nhập tên sách!", "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
             txtTenSach.requestFocus();
+            return;
+        }
+        
+        if (txtTenSach.getText().trim().length() < 2) {
+            JOptionPane.showMessageDialog(this, "Tên sách phải có ít nhất 2 ký tự!", "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
+            txtTenSach.requestFocus();
+            return;
+        }
+        
+        // 3. Thể loại (bắt buộc)
+        String theLoaiId = extractIdFromComboBox(cboMaTheLoai);
+        if (theLoaiId == null) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn thể loại sách!", "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
+            cboMaTheLoai.requestFocus();
+            return;
+        }
+        
+        // 4. Tác giả (bắt buộc)
+        String authorInput = (String) cboMaTG.getSelectedItem();
+        if (authorInput == null || authorInput.trim().isEmpty() || authorInput.startsWith("--")) {
+            JOptionPane.showMessageDialog(this, "Vui lòng nhập hoặc chọn tác giả!", "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
+            cboMaTG.requestFocus();
+            return;
+        }
+        
+        // 5. Nhà xuất bản (bắt buộc)
+        String nxbId = extractIdFromComboBox(cboMaNXB);
+        if (nxbId == null) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn nhà xuất bản!", "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
+            cboMaNXB.requestFocus();
+            return;
+        }
+        
+        // 6. Năm xuất bản
+        int namXB = (Integer) spnNamXB.getValue();
+        int currentYear = java.time.Year.now().getValue();
+        if (namXB < 1000 || namXB > currentYear + 1) {
+            JOptionPane.showMessageDialog(this, 
+                "Năm xuất bản không hợp lệ! Phải từ 1000 đến " + (currentYear + 1) + "!", 
+                "Lỗi nhập liệu", 
+                JOptionPane.ERROR_MESSAGE);
+            spnNamXB.requestFocus();
+            return;
+        }
+        
+        // 7. Số lượng
+        int soLuong = (Integer) spnSoLuong.getValue();
+        if (soLuong < 0) {
+            JOptionPane.showMessageDialog(this, "Số lượng phải lớn hơn hoặc bằng 0!", "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
+            spnSoLuong.requestFocus();
+            return;
+        }
+        
+        // 8. Đơn giá
+        if (txtDonGia.getText().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Vui lòng nhập đơn giá!", "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
+            txtDonGia.requestFocus();
             return;
         }
         
@@ -301,6 +390,12 @@ public class BookDialog extends JDialog {
             double donGia = Double.parseDouble(txtDonGia.getText().trim());
             if (donGia < 0) {
                 JOptionPane.showMessageDialog(this, "Đơn giá phải lớn hơn hoặc bằng 0!", "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
+                txtDonGia.requestFocus();
+                return;
+            }
+            if (donGia > 10000000) {
+                JOptionPane.showMessageDialog(this, "Đơn giá quá cao! Vui lòng kiểm tra lại.", "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
+                txtDonGia.requestFocus();
                 return;
             }
         } catch (NumberFormatException e) {
@@ -309,23 +404,82 @@ public class BookDialog extends JDialog {
             return;
         }
         
+        // 9. Vị trí (optional nhưng nếu có thì validate)
+        String viTri = txtViTri.getText().trim();
+        if (!viTri.isEmpty() && viTri.length() > 50) {
+            JOptionPane.showMessageDialog(this, "Vị trí không được quá 50 ký tự!", "Lỗi nhập liệu", JOptionPane.ERROR_MESSAGE);
+            txtViTri.requestFocus();
+            return;
+        }
+        
         // Create/Update book object
-        if (book == null) {
+        boolean isNewBook = (book == null);
+        if (isNewBook) {
             book = new Book();
         }
         
-        book.setMaSach(txtMaSach.getText().trim());
-        book.setTenSach(txtTenSach.getText().trim());
-        book.setMaTG(extractIdFromComboBox(cboMaTG));
-        book.setMaTheLoai(extractIdFromComboBox(cboMaTheLoai));
-        book.setMaNXB(extractIdFromComboBox(cboMaNXB));
-        book.setNamXB((Integer) spnNamXB.getValue());
-        book.setSoLuong((Integer) spnSoLuong.getValue());
-        book.setDonGia(Double.parseDouble(txtDonGia.getText().trim()));
-        book.setViTri(txtViTri.getText().trim().isEmpty() ? null : txtViTri.getText().trim());
-        
-        confirmed = true;
-        dispose();
+        try {
+            book.setMaSach(txtMaSach.getText().trim());
+            book.setTenSach(txtTenSach.getText().trim());
+            book.setMaTG(getAuthorId()); // Tự động tạo tác giả nếu chưa có
+            book.setMaTheLoai(theLoaiId);
+            book.setMaNXB(nxbId);
+            book.setNamXB(namXB);
+            book.setSoLuong(soLuong);
+            book.setDonGia(Double.parseDouble(txtDonGia.getText().trim()));
+            book.setViTri(viTri.isEmpty() ? null : viTri);
+            
+            // Save to database
+            if (isNewBook) {
+                bookDAO.insertBook(book);
+                JOptionPane.showMessageDialog(this,
+                    "Thêm sách thành công!",
+                    "Thành Công",
+                    JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                bookDAO.updateBook(book);
+                JOptionPane.showMessageDialog(this,
+                    "Cập nhật sách thành công!",
+                    "Thành Công",
+                    JOptionPane.INFORMATION_MESSAGE);
+            }
+            
+            confirmed = true;
+            dispose();
+            
+        } catch (SQLException ex) {
+            String errorMsg = ex.getMessage();
+            
+            // Xử lý các lỗi phổ biến
+            if (errorMsg.contains("Duplicate entry")) {
+                if (errorMsg.contains("PRIMARY")) {
+                    JOptionPane.showMessageDialog(this,
+                        "Mã sách '" + book.getMaSach() + "' đã tồn tại!\n" +
+                        "Vui lòng nhập mã khác.",
+                        "Lỗi Trùng Mã",
+                        JOptionPane.ERROR_MESSAGE);
+                    txtMaSach.requestFocus();
+                    txtMaSach.selectAll();
+                } else {
+                    JOptionPane.showMessageDialog(this,
+                        "Dữ liệu bị trùng: " + errorMsg,
+                        "Lỗi",
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            } else if (errorMsg.contains("tac_gia") || errorMsg.contains("author")) {
+                JOptionPane.showMessageDialog(this,
+                    "Lỗi khi tạo tác giả: " + errorMsg,
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this,
+                    "Lỗi khi lưu sách:\n" + errorMsg,
+                    "Lỗi Database",
+                    JOptionPane.ERROR_MESSAGE);
+            }
+            
+            // KHÔNG dispose() - giữ dialog mở để user có thể sửa
+        }
     }
     
     public boolean isConfirmed() {

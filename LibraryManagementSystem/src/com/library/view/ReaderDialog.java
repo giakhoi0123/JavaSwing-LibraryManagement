@@ -1,13 +1,32 @@
 package com.library.view;
 
-import com.library.model.Reader;
-import com.library.util.ValidationUtil;
-
-import javax.swing.*;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.Window;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Date;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JSpinner;
+import javax.swing.JTextField;
+import javax.swing.SpinnerDateModel;
+
+import com.library.dao.ReaderDAO;
+import com.library.model.Reader;
+import com.library.util.ValidationUtil;
 
 /**
  * Dialog for Adding/Editing Reader Information
@@ -16,6 +35,7 @@ public class ReaderDialog extends JDialog {
     
     private Reader reader;
     private boolean confirmed = false;
+    private ReaderDAO readerDAO;
     
     private JTextField txtMaDG;
     private JTextField txtHoTen;
@@ -34,6 +54,7 @@ public class ReaderDialog extends JDialog {
     public ReaderDialog(Window owner, Reader reader) {
         super(owner, reader == null ? "Thêm Độc Giả Mới" : "Sửa Thông Tin Độc Giả", ModalityType.APPLICATION_MODAL);
         this.reader = reader;
+        this.readerDAO = new ReaderDAO();
         
         setSize(500, 650);
         setLocationRelativeTo(owner);
@@ -45,6 +66,7 @@ public class ReaderDialog extends JDialog {
         
         if (reader != null) {
             populateFields();
+            txtMaDG.setEditable(false); // Không cho sửa mã khi edit
         }
     }
     
@@ -214,31 +236,43 @@ public class ReaderDialog extends JDialog {
         // Validation
         if (txtMaDG.getText().trim().isEmpty()) {
             JOptionPane.showMessageDialog(this, "Vui lòng nhập mã độc giả!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            txtMaDG.requestFocus();
             return;
         }
         
         if (txtHoTen.getText().trim().isEmpty()) {
             JOptionPane.showMessageDialog(this, "Vui lòng nhập họ tên!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            txtHoTen.requestFocus();
             return;
         }
         
         if (txtSoDT.getText().trim().isEmpty()) {
             JOptionPane.showMessageDialog(this, "Vui lòng nhập số điện thoại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            txtSoDT.requestFocus();
             return;
         }
         
         if (!ValidationUtil.isValidPhoneNumber(txtSoDT.getText().trim())) {
-            JOptionPane.showMessageDialog(this, "Số điện thoại không hợp lệ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, 
+                "Số điện thoại không hợp lệ! Phải có 10 số và bắt đầu bằng 0.", 
+                "Lỗi", 
+                JOptionPane.ERROR_MESSAGE);
+            txtSoDT.requestFocus();
             return;
         }
         
         if (!txtEmail.getText().trim().isEmpty() && !ValidationUtil.isValidEmail(txtEmail.getText().trim())) {
-            JOptionPane.showMessageDialog(this, "Email không hợp lệ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, 
+                "Email không hợp lệ! Phải theo định dạng: example@domain.com", 
+                "Lỗi", 
+                JOptionPane.ERROR_MESSAGE);
+            txtEmail.requestFocus();
             return;
         }
         
         // Create/Update reader object
-        if (reader == null) {
+        boolean isNewReader = (reader == null);
+        if (isNewReader) {
             reader = new Reader();
         }
         
@@ -261,8 +295,53 @@ public class ReaderDialog extends JDialog {
         
         reader.setTrangThai((String) cmbTrangThai.getSelectedItem());
         
-        confirmed = true;
-        dispose();
+        // Save to database
+        try {
+            if (isNewReader) {
+                readerDAO.insertReader(reader);
+                JOptionPane.showMessageDialog(this,
+                    "Thêm độc giả thành công!",
+                    "Thành Công",
+                    JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                readerDAO.updateReader(reader);
+                JOptionPane.showMessageDialog(this,
+                    "Cập nhật độc giả thành công!",
+                    "Thành Công",
+                    JOptionPane.INFORMATION_MESSAGE);
+            }
+            
+            confirmed = true;
+            dispose();
+            
+        } catch (SQLException ex) {
+            String errorMsg = ex.getMessage();
+            
+            // Xử lý các lỗi phổ biến
+            if (errorMsg.contains("Duplicate entry")) {
+                if (errorMsg.contains("PRIMARY")) {
+                    JOptionPane.showMessageDialog(this,
+                        "Mã độc giả '" + reader.getMaDG() + "' đã tồn tại!\n" +
+                        "Vui lòng nhập mã khác.",
+                        "Lỗi Trùng Mã",
+                        JOptionPane.ERROR_MESSAGE);
+                    txtMaDG.requestFocus();
+                    txtMaDG.selectAll();
+                } else {
+                    JOptionPane.showMessageDialog(this,
+                        "Dữ liệu bị trùng: " + errorMsg,
+                        "Lỗi",
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                JOptionPane.showMessageDialog(this,
+                    "Lỗi khi lưu độc giả:\n" + errorMsg,
+                    "Lỗi Database",
+                    JOptionPane.ERROR_MESSAGE);
+            }
+            
+            // KHÔNG dispose() - giữ dialog mở để user có thể sửa
+        }
     }
     
     public boolean isConfirmed() {

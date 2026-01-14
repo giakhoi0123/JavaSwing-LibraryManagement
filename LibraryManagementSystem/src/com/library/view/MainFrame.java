@@ -26,7 +26,7 @@ import com.library.dao.BookDAO;
 import com.library.dao.BorrowDAO;
 import com.library.dao.ReaderDAO;
 import com.library.dao.TicketFineDAO;
-import com.library.model.Staff;
+import com.library.model.*;
 
 /**
  * Main Application Frame

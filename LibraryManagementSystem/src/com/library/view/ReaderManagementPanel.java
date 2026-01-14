@@ -242,7 +242,16 @@ public class ReaderManagementPanel extends JPanel {
             }
             
             System.out.println("✓ Added " + tableModel.getRowCount() + " rows to table");
+            
+            // Clear filters and refresh display
+            txtSearch.setText("");
+            chkActiveOnly.setSelected(false);
+            rowSorter.setRowFilter(null);
+            
             updateStatus();
+            tableModel.fireTableDataChanged();
+            tblReaders.revalidate();
+            tblReaders.repaint();
             
         } catch (SQLException ex) {
             ex.printStackTrace();
@@ -295,20 +304,7 @@ public class ReaderManagementPanel extends JPanel {
         dialog.setVisible(true);
         
         if (dialog.isConfirmed()) {
-            Reader newReader = dialog.getReader();
-            try {
-                readerDAO.insertReader(newReader);
-                JOptionPane.showMessageDialog(this,
-                    "Thêm độc giả thành công!",
-                    "Thành Công",
-                    JOptionPane.INFORMATION_MESSAGE);
-                loadReadersData();
-            } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this,
-                    "Lỗi khi thêm độc giả: " + ex.getMessage(),
-                    "Lỗi",
-                    JOptionPane.ERROR_MESSAGE);
-            }
+            loadReadersData();
         }
     }
     
@@ -326,12 +322,6 @@ public class ReaderManagementPanel extends JPanel {
                 dialog.setVisible(true);
                 
                 if (dialog.isConfirmed()) {
-                    Reader updatedReader = dialog.getReader();
-                    readerDAO.updateReader(updatedReader);
-                    JOptionPane.showMessageDialog(this,
-                        "Cập nhật độc giả thành công!",
-                        "Thành Công",
-                        JOptionPane.INFORMATION_MESSAGE);
                     loadReadersData();
                 }
             }
