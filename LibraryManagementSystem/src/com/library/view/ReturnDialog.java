@@ -86,7 +86,8 @@ public class ReturnDialog extends JDialog {
         
         // Set up status combo box for column 3
         JComboBox<String> statusCombo = new JComboBox<>(new String[]{
-            "Bình thường", 
+            "Tốt", 
+            "Cũ",
             "Hư hỏng nhẹ", 
             "Hư hỏng nặng", 
             "Mất"
@@ -237,7 +238,7 @@ public class ReturnDialog extends JDialog {
                 detail.getMaSach(),
                 bookName,
                 detail.getSoLuongMuon(),
-                "Bình thường", // Default status
+                "Tốt", // Default status
                 "" // Empty notes
             });
             
@@ -245,7 +246,7 @@ public class ReturnDialog extends JDialog {
             ReturnBookInfo info = new ReturnBookInfo();
             info.bookId = detail.getMaSach();
             info.quantity = detail.getSoLuongMuon();
-            info.status = "Bình thường";
+            info.status = "Tốt";
             info.notes = "";
             returnInfoMap.put(detail.getMaSach(), info);
         }

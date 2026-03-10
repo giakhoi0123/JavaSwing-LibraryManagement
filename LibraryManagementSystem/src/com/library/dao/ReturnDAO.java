@@ -79,12 +79,13 @@ public class ReturnDAO {
             returnTicket.setTienPhat(totalFine);
             
             // 4. Insert return ticket
-            String insertReturn = "INSERT INTO PHIEU_TRA (MaPT, MaPM, NgayTra, TienPhat) VALUES (?, ?, ?, ?)";
+            String insertReturn = "INSERT INTO PHIEU_TRA (MaPT, MaPM, NgayTra, TienPhat, MaNV) VALUES (?, ?, ?, ?, ?)";
             PreparedStatement pstmt1 = conn.prepareStatement(insertReturn);
             pstmt1.setString(1, returnTicket.getMaPT());
             pstmt1.setString(2, returnTicket.getMaPM());
             pstmt1.setDate(3, Date.valueOf(returnTicket.getNgayTra()));
             pstmt1.setDouble(4, totalFine);
+            pstmt1.setString(5, staffId);
             pstmt1.executeUpdate();
             pstmt1.close();
             
