@@ -58,7 +58,6 @@ public class ReturnDAO {
             LocalDate hanTra = borrowTicket.getHanTra();
             
             if (ngayTra.isAfter(hanTra)) {
-                long daysLate = DateUtil.daysBetween(hanTra, ngayTra);
                 lateFine = borrowDAO.calculateLateFine(borrowTicket.getMaPM(), ngayTra);
             }
             

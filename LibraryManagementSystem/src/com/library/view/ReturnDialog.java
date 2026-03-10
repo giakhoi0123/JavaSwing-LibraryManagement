@@ -1,22 +1,35 @@
 package com.library.view;
 
-import com.library.dao.BookDAO;
-import com.library.dao.BorrowDAO;
-import com.library.model.Book;
-import com.library.model.BorrowDetail;
-import com.library.model.BorrowTicket;
-import com.library.util.ErrorMessages;
-
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.Window;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.swing.BorderFactory;
+import javax.swing.DefaultCellEditor;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextArea;
+import javax.swing.table.DefaultTableModel;
+
+import com.library.dao.BookDAO;
+import com.library.model.Book;
+import com.library.model.BorrowDetail;
+import com.library.model.BorrowTicket;
 
 /**
  * Dialog for handling book returns with detailed status
@@ -28,7 +41,6 @@ public class ReturnDialog extends JDialog {
     private boolean confirmed = false;
     
     private BookDAO bookDAO;
-    private BorrowDAO borrowDAO;
     
     // Components
     private JTable tblBooks;
@@ -49,7 +61,6 @@ public class ReturnDialog extends JDialog {
         this.borrowTicket = ticket;
         this.borrowDetails = details;
         this.bookDAO = new BookDAO();
-        this.borrowDAO = new BorrowDAO();
         this.returnInfoMap = new HashMap<>();
         
         setSize(900, 700);

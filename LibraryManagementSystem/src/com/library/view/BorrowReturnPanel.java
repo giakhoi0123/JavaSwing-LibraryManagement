@@ -1,16 +1,43 @@
 package com.library.view;
 
-import com.library.model.*;
-import com.library.dao.*;
-import com.library.util.DateUtil;
-
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridLayout;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTabbedPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import javax.swing.table.DefaultTableModel;
+
+import com.library.dao.BookDAO;
+import com.library.dao.BorrowDAO;
+import com.library.dao.ReaderDAO;
+import com.library.dao.ReturnDAO;
+import com.library.model.Book;
+import com.library.model.BorrowDetail;
+import com.library.model.BorrowTicket;
+import com.library.model.Reader;
+import com.library.model.ReturnDetail;
+import com.library.model.ReturnTicket;
+import com.library.model.Staff;
+import com.library.util.DateUtil;
 
 /**
  * Borrow and Return Panel
@@ -519,22 +546,130 @@ public class BorrowReturnPanel extends JPanel {
             return;
         }
         
-        int confirm = JOptionPane.showConfirmDialog(this,
-            "Xác nhận trả sách cho phiếu mượn: " + selectedBorrowTicket.getMaPM() + "?",
-            "Xác Nhận",
-            JOptionPane.YES_NO_OPTION);
-        
-        if (confirm == JOptionPane.YES_OPTION) {
-            JOptionPane.showMessageDialog(this, 
-                "Chức năng trả sách đang được phát triển!\n" +
-                "Sẽ bao gồm:\n" +
-                "- Cập nhật trạng thái phiếu mượn\n" +
-                "- Cộng lại số lượng sách\n" +
-                "- Tính tiền phạt tự động\n" +
-                "- Lưu vào bảng PHIEU_TRA",
-                "Thông Báo",
-                JOptionPane.INFORMATION_MESSAGE);
+        try {
+            // Get borrow details
+            List<BorrowDetail> details = borrowDAO.getBorrowDetails(selectedBorrowTicket.getMaPM());
+            
+            if (details.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Không tìm thấy chi tiết phiếu mượn!");
+                return;
+            }
+            
+            // Open return dialog
+            ReturnDialog dialog = new ReturnDialog(SwingUtilities.getWindowAncestor(this), 
+                                                   selectedBorrowTicket, details);
+            dialog.setVisible(true);
+            
+            // Process return if confirmed
+            if (dialog.isConfirmed()) {
+                processReturn(dialog);
+            }
+            
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this,
+                "Lỗi khi xử lý trả sách: " + ex.getMessage(),
+                "Lỗi",
+                JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
         }
+    }
+    
+    private void processReturn(ReturnDialog dialog) {
+        try {
+            // Generate return ticket ID
+            String returnId = generateReturnTicketId();
+            
+            // Create return ticket
+            ReturnTicket returnTicket = new ReturnTicket();
+            returnTicket.setMaPT(returnId);
+            returnTicket.setMaPM(selectedBorrowTicket.getMaPM());
+            returnTicket.setNgayTra(LocalDate.now());
+            returnTicket.setTienPhat(dialog.getTotalFine());
+            
+            // Create return details from dialog
+            List<ReturnDetail> returnDetails = new ArrayList<>();
+            Map<String, ReturnDialog.ReturnBookInfo> returnInfo = dialog.getReturnInfo();
+            
+            for (Map.Entry<String, ReturnDialog.ReturnBookInfo> entry : returnInfo.entrySet()) {
+                ReturnDialog.ReturnBookInfo info = entry.getValue();
+                ReturnDetail detail = new ReturnDetail();
+                detail.setMaPT(returnId);
+                detail.setMaSach(info.bookId);
+                detail.setTinhTrangLucTra(info.status);
+                
+                // Calculate damage fine based on status
+                double damageFine = 0;
+                switch (info.status) {
+                    case "Hư hỏng nhẹ":
+                        damageFine = 20000 * info.quantity;
+                        break;
+                    case "Hư hỏng nặng":
+                        damageFine = 100000 * info.quantity;
+                        break;
+                    case "Mất":
+                        damageFine = 500000 * info.quantity;
+                        break;
+                }
+                detail.setTienPhatSach(damageFine);
+                returnDetails.add(detail);
+            }
+            
+            // Process return in database
+            ReturnDAO returnDAO = new ReturnDAO();
+            boolean success = returnDAO.processReturn(returnTicket, returnDetails, currentStaff.getMaNV());
+            
+            if (success) {
+                JOptionPane.showMessageDialog(this,
+                    "Trả sách thành công!\n" +
+                    "Mã phiếu trả: " + returnId + "\n" +
+                    "Tổng tiền phạt: " + String.format("%,.0f VNĐ", dialog.getTotalFine()),
+                    "Thành Công",
+                    JOptionPane.INFORMATION_MESSAGE);
+                
+                // Reload data
+                loadActiveBorrows();
+                selectedBorrowTicket = null;
+                borrowDetailsModel.setRowCount(0);
+                lblLateFine.setText("Tiền phạt: 0 VNĐ");
+            } else {
+                JOptionPane.showMessageDialog(this,
+                    "Không thể trả sách. Vui lòng thử lại!",
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+            }
+            
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this,
+                "Lỗi khi lưu phiếu trả: " + ex.getMessage(),
+                "Lỗi",
+                JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
+    }
+    
+    private String generateReturnTicketId() throws SQLException {
+        ReturnDAO returnDAO = new ReturnDAO();
+        List<ReturnTicket> allReturns = returnDAO.getAllReturnTickets();
+        
+        if (allReturns.isEmpty()) {
+            return "PT001";
+        }
+        
+        // Find max ID and increment
+        int maxNum = 0;
+        for (ReturnTicket ticket : allReturns) {
+            String id = ticket.getMaPT();
+            if (id.startsWith("PT")) {
+                try {
+                    int num = Integer.parseInt(id.substring(2));
+                    maxNum = Math.max(maxNum, num);
+                } catch (NumberFormatException e) {
+                    // Skip invalid IDs
+                }
+            }
+        }
+        
+        return String.format("PT%03d", maxNum + 1);
     }
     
     // Inner class for Book Selection Dialog

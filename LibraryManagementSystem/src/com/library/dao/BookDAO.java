@@ -1,10 +1,16 @@
 package com.library.dao;
 
-import com.library.model.Book;
-import com.library.util.DBConnection;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.library.model.Book;
+import com.library.util.DBConnection;
 
 /**
  * Data Access Object for Book entity
@@ -144,6 +150,42 @@ public class BookDAO {
         String query = "INSERT INTO SACH (MaSach, TenSach, MaTG, MaTheLoai, MaNXB, " +
                       "NamXB, SoLuong, DonGia, ViTri, TrangThai) " +
                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        
+        Connection conn = dbConnection.getConnection();
+        PreparedStatement pstmt = conn.prepareStatement(query);
+        pstmt.setString(1, book.getMaSach());
+        pstmt.setString(2, book.getTenSach());
+        pstmt.setString(3, book.getMaTG());
+        pstmt.setString(4, book.getMaTheLoai());
+        pstmt.setString(5, book.getMaNXB());
+        pstmt.setInt(6, book.getNamXB());
+        pstmt.setInt(7, book.getSoLuong());
+        pstmt.setDouble(8, book.getDonGia());
+        pstmt.setString(9, book.getViTri());
+        pstmt.setString(10, book.getTrangThai());
+        
+        int result = pstmt.executeUpdate();
+        pstmt.close();
+        
+        return result > 0;
+    }
+    
+    /**
+     * Insert or update book (upsert)
+     * If book with same MaSach exists, update it; otherwise insert new
+     * @param book Book object to insert or update
+     * @return true if successful
+     */
+    public boolean upsertBook(Book book) throws SQLException {
+        String query = "INSERT INTO SACH (MaSach, TenSach, MaTG, MaTheLoai, MaNXB, " +
+                      "NamXB, SoLuong, DonGia, ViTri, TrangThai) " +
+                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
+                      "ON DUPLICATE KEY UPDATE " +
+                      "TenSach = VALUES(TenSach), MaTG = VALUES(MaTG), " +
+                      "MaTheLoai = VALUES(MaTheLoai), MaNXB = VALUES(MaNXB), " +
+                      "NamXB = VALUES(NamXB), SoLuong = VALUES(SoLuong), " +
+                      "DonGia = VALUES(DonGia), ViTri = VALUES(ViTri), " +
+                      "TrangThai = VALUES(TrangThai)";
         
         Connection conn = dbConnection.getConnection();
         PreparedStatement pstmt = conn.prepareStatement(query);

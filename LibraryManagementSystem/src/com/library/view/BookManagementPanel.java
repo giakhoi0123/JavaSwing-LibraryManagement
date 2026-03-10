@@ -42,6 +42,8 @@ public class BookManagementPanel extends JPanel {
     private JButton btnDelete;
     private JButton btnRefresh;
     private JButton btnViewDetails;
+    private JButton btnImportExcel;
+    private JButton btnExportExcel;
     
     public BookManagementPanel(Staff staff) {
         this.currentStaff = staff;
@@ -116,6 +118,8 @@ public class BookManagementPanel extends JPanel {
         btnDelete = createStyledButton("🗑️ Xóa Sách", new Color(244, 67, 54));
         btnViewDetails = createStyledButton("👁️ Chi Tiết", new Color(33, 150, 243));
         btnRefresh = createStyledButton("🔄 Làm Mới", new Color(96, 125, 139));
+        btnImportExcel = createStyledButton("📥 Nhập Excel", new Color(0, 150, 136));
+        btnExportExcel = createStyledButton("📤 Xuất Excel", new Color(103, 58, 183));
         
         btnEdit.setEnabled(false);
         btnDelete.setEnabled(false);
@@ -178,15 +182,24 @@ public class BookManagementPanel extends JPanel {
         searchPanel.add(cmbCategoryFilter);
         searchPanel.add(chkAvailableOnly);
         
-        // Button Panel
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
-        buttonPanel.setBackground(Color.WHITE);
+        // Button Panel - split into 2 rows to avoid overflow
+        JPanel buttonRow1 = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
+        buttonRow1.setBackground(Color.WHITE);
+        buttonRow1.add(btnAdd);
+        buttonRow1.add(btnEdit);
+        buttonRow1.add(btnDelete);
+        buttonRow1.add(btnViewDetails);
+        buttonRow1.add(btnRefresh);
         
-        buttonPanel.add(btnAdd);
-        buttonPanel.add(btnEdit);
-        buttonPanel.add(btnDelete);
-        buttonPanel.add(btnViewDetails);
-        buttonPanel.add(btnRefresh);
+        JPanel buttonRow2 = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
+        buttonRow2.setBackground(Color.WHITE);
+        buttonRow2.add(btnImportExcel);
+        buttonRow2.add(btnExportExcel);
+        
+        JPanel buttonPanel = new JPanel(new BorderLayout());
+        buttonPanel.setBackground(Color.WHITE);
+        buttonPanel.add(buttonRow1, BorderLayout.NORTH);
+        buttonPanel.add(buttonRow2, BorderLayout.SOUTH);
         
         // Top Panel (Search + Buttons)
         JPanel topPanel = new JPanel(new BorderLayout(10, 10));
@@ -242,6 +255,8 @@ public class BookManagementPanel extends JPanel {
         btnDelete.addActionListener(e -> deleteSelectedBook());
         btnViewDetails.addActionListener(e -> showBookDetails());
         btnRefresh.addActionListener(e -> loadBooksData());
+        btnImportExcel.addActionListener(e -> importBooksFromExcel());
+        btnExportExcel.addActionListener(e -> exportBooksToExcel());
     }
     
     private void loadBooksData() {
@@ -486,6 +501,114 @@ public class BookManagementPanel extends JPanel {
                 "Lỗi khi xem chi tiết: " + ex.getMessage(),
                 "Lỗi",
                 JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    /**
+     * Import books from Excel file
+     */
+    private void importBooksFromExcel() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Chọn File Excel/CSV để Nhập Sách");
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+            "Excel & CSV Files (*.xlsx, *.xls, *.csv)", "xlsx", "xls", "csv"));
+        
+        int result = fileChooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            try {
+                String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+                
+                // Import books from Excel
+                List<Book> importedBooks = com.library.util.ExcelUtil.importBooksFromExcel(filePath);
+                
+                if (importedBooks.isEmpty()) {
+                    JOptionPane.showMessageDialog(this,
+                        "Không có dữ liệu để nhập!",
+                        "Thông Báo",
+                        JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                
+                // Save books to database
+                int successCount = 0;
+                int errorCount = 0;
+                StringBuilder errors = new StringBuilder();
+                
+                for (Book book : importedBooks) {
+                    try {
+                        bookDAO.upsertBook(book);
+                        successCount++;
+                    } catch (SQLException ex) {
+                        errorCount++;
+                        errors.append("- ").append(book.getTenSach()).append(": ").append(ex.getMessage()).append("\n");
+                    }
+                }
+                
+                // Reload data
+                loadBooksData();
+                
+                // Show result
+                String message = String.format(
+                    "Nhập thành công: %d sách\nLỗi: %d sách\n\n%s",
+                    successCount, errorCount,
+                    errorCount > 0 ? "Chi tiết lỗi:\n" + errors.toString() : ""
+                );
+                
+                JOptionPane.showMessageDialog(this,
+                    message,
+                    "Kết Quả Nhập Excel",
+                    errorCount > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
+                    
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this,
+                    "Lỗi khi nhập file Excel: " + ex.getMessage(),
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+                ex.printStackTrace();
+            }
+        }
+    }
+    
+    /**
+     * Export books to Excel file
+     */
+    private void exportBooksToExcel() {
+        try {
+            List<Book> books = bookDAO.getAllBooks();
+            
+            if (books.isEmpty()) {
+                JOptionPane.showMessageDialog(this,
+                    "Không có dữ liệu để xuất!",
+                    "Thông Báo",
+                    JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Lưu File Excel");
+            fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Excel Files", "xlsx"));
+            fileChooser.setSelectedFile(new java.io.File("DanhSachSach.xlsx"));
+            
+            int result = fileChooser.showSaveDialog(this);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+                if (!filePath.endsWith(".xlsx")) {
+                    filePath += ".xlsx";
+                }
+                
+                com.library.util.ExcelUtil.exportBooksToExcel(books, filePath);
+                
+                JOptionPane.showMessageDialog(this,
+                    "Xuất file Excel thành công!\nĐường dẫn: " + filePath,
+                    "Thành Công",
+                    JOptionPane.INFORMATION_MESSAGE);
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                "Lỗi khi xuất file Excel: " + ex.getMessage(),
+                "Lỗi",
+                JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
         }
     }
 }

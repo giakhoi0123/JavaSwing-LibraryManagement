@@ -44,6 +44,22 @@ public class Reader {
         this.ngayHetHan = LocalDate.now().plusYears(1);
     }
     
+    // Full constructor with all fields including dates and status
+    public Reader(String maDG, String hoTen, LocalDate ngaySinh, String gioiTinh,
+                  String soDT, String email, String diaChi,
+                  LocalDate ngayLapThe, LocalDate ngayHetHan, String trangThai) {
+        this.maDG = maDG;
+        this.hoTen = hoTen;
+        this.ngaySinh = ngaySinh;
+        this.gioiTinh = gioiTinh;
+        this.soDT = soDT;
+        this.email = email;
+        this.diaChi = diaChi;
+        this.ngayLapThe = ngayLapThe;
+        this.ngayHetHan = ngayHetHan;
+        this.trangThai = trangThai;
+    }
+    
     // Getters and Setters
     public String getMaDG() {
         return maDG;

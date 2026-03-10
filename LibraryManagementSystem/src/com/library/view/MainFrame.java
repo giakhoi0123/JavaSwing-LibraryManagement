@@ -26,7 +26,7 @@ import com.library.dao.BookDAO;
 import com.library.dao.BorrowDAO;
 import com.library.dao.ReaderDAO;
 import com.library.dao.TicketFineDAO;
-import com.library.model.*;
+import com.library.model.Staff;
 
 /**
  * Main Application Frame
@@ -109,8 +109,8 @@ public class MainFrame extends JFrame {
         button.setForeground(Color.WHITE);
         button.setFocusPainted(false);
         button.setBorderPainted(false);
-        button.setPreferredSize(new Dimension(200, 45));
-        button.setMaximumSize(new Dimension(200, 45));
+        button.setPreferredSize(new Dimension(210, 45));
+        button.setMaximumSize(new Dimension(210, 45));
         button.setAlignmentX(Component.LEFT_ALIGNMENT);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
@@ -182,7 +182,7 @@ public class MainFrame extends JFrame {
         JPanel sidebarPanel = new JPanel();
         sidebarPanel.setLayout(new BoxLayout(sidebarPanel, BoxLayout.Y_AXIS));
         sidebarPanel.setBackground(new Color(37, 37, 38));
-        sidebarPanel.setPreferredSize(new Dimension(220, 640));
+        sidebarPanel.setPreferredSize(new Dimension(230, 640));
         sidebarPanel.setBorder(BorderFactory.createEmptyBorder(20, 10, 20, 10));
         
         // Logo at top of sidebar
@@ -219,6 +219,10 @@ public class MainFrame extends JFrame {
         }
         
         sidebarPanel.add(Box.createVerticalGlue());
+        
+        // Đăng Xuất button with distinct red style
+        btnLogout.setBackground(new Color(183, 28, 28));
+        btnLogout.setFont(new Font("Segoe UI", Font.BOLD, 14));
         sidebarPanel.add(btnLogout);
         
         // Add panels to frame
@@ -297,7 +301,7 @@ public class MainFrame extends JFrame {
             int availableBooks = bookDAO.getAvailableBooks().size();
             int activeReaders = readerDAO.getActiveReaders().size();
             int allReaders = readerDAO.getAllReaders().size();
-            int currentBorrows = borrowDAO.getAllBorrowTickets().size();
+            // int currentBorrows = borrowDAO.getAllBorrowTickets().size(); // Reserved for future use
             int overdueTickets = borrowDAO.getOverdueBorrowTickets().size();
             double totalFines = fineDAO.getTotalFinesAmount();
             
@@ -393,8 +397,18 @@ public class MainFrame extends JFrame {
     
     private void showStaffManagement() {
         contentPanel.removeAll();
-        StaffManagementPanel staffPanel = new StaffManagementPanel(currentStaff);
-        contentPanel.add(staffPanel);
+        try {
+            StaffManagementPanel staffPanel = new StaffManagementPanel(currentStaff);
+            contentPanel.add(staffPanel);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JLabel errorLabel = new JLabel(
+                "<html><center>Lỗi khi tải Quản Lý Nhân Viên:<br>" + ex.getMessage() + "</center></html>",
+                SwingConstants.CENTER);
+            errorLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+            errorLabel.setForeground(Color.RED);
+            contentPanel.add(errorLabel);
+        }
         contentPanel.revalidate();
         contentPanel.repaint();
     }

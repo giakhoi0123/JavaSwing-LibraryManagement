@@ -19,6 +19,7 @@ import javax.swing.SwingConstants;
 import com.library.dao.BookDAO;
 import com.library.dao.BorrowDAO;
 import com.library.dao.ReaderDAO;
+import com.library.dao.TicketFineDAO;
 import com.toedter.calendar.JDateChooser;
 
 /**
@@ -119,12 +120,16 @@ public class StatisticsPanel extends JPanel {
             int overdueTickets = borrowDAO.getOverdueBorrowTickets().size();
             int allReaders = readerDAO.getAllReaders().size();
             
+            // Get total fines
+            TicketFineDAO fineDAO = new TicketFineDAO();
+            double totalFines = fineDAO.getTotalFinesAmount();
+            
             cardsPanel.add(createStatCard("📚 Tổng Số Sách", String.valueOf(totalBooks), new Color(33, 150, 243)));
             cardsPanel.add(createStatCard("✅ Sách Còn", String.valueOf(availableBooks), new Color(76, 175, 80)));
             cardsPanel.add(createStatCard("👥 ĐG Hoạt Động", String.valueOf(activeReaders), new Color(255, 152, 0)));
             cardsPanel.add(createStatCard("⚠️ Phiếu Quá Hạn", String.valueOf(overdueTickets), new Color(244, 67, 54)));
             cardsPanel.add(createStatCard("📖 Tổng Độc Giả", String.valueOf(allReaders), new Color(156, 39, 176)));
-            cardsPanel.add(createStatCard("💰 Tổng Phạt", "0 VNĐ", new Color(0, 150, 136)));
+            cardsPanel.add(createStatCard("💰 Tổng Phạt", String.format("%,.0f VNĐ", totalFines), new Color(0, 150, 136)));
             
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this,

@@ -24,6 +24,7 @@ com/library/util/DateUtil.class
 com/library/util/ExcelUtil.class
 com/library/model/TicketFine.class
 com/library/util/ValidationUtil.class
+com/library/util/SampleExcelGenerator.class
 com/library/util/PDFUtil.class
 com/library/main/Main.class
 com/library/view/LoginDialog$2.class

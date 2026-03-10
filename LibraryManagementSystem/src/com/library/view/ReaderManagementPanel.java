@@ -9,7 +9,6 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.sql.SQLException;
-import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -35,6 +34,8 @@ public class ReaderManagementPanel extends JPanel {
     private JButton btnRenew;
     private JButton btnRefresh;
     private JButton btnViewDetails;
+    private JButton btnImportExcel;
+    private JButton btnExportExcel;
     
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     
@@ -98,6 +99,8 @@ public class ReaderManagementPanel extends JPanel {
         btnRenew = createStyledButton("🔄 Gia Hạn", new Color(33, 150, 243));
         btnViewDetails = createStyledButton("👁️ Chi Tiết", new Color(156, 39, 176));
         btnRefresh = createStyledButton("🔄 Làm Mới", new Color(96, 125, 139));
+        btnImportExcel = createStyledButton("📥 Nhập Excel", new Color(0, 150, 136));
+        btnExportExcel = createStyledButton("📤 Xuất Excel", new Color(103, 58, 183));
         
         btnEdit.setEnabled(false);
         btnDelete.setEnabled(false);
@@ -154,15 +157,24 @@ public class ReaderManagementPanel extends JPanel {
         searchPanel.add(txtSearch);
         searchPanel.add(chkActiveOnly);
         
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
-        buttonPanel.setBackground(Color.WHITE);
+        JPanel buttonRow1 = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
+        buttonRow1.setBackground(Color.WHITE);
+        buttonRow1.add(btnAdd);
+        buttonRow1.add(btnEdit);
+        buttonRow1.add(btnDelete);
+        buttonRow1.add(btnRenew);
+        buttonRow1.add(btnViewDetails);
+        buttonRow1.add(btnRefresh);
         
-        buttonPanel.add(btnAdd);
-        buttonPanel.add(btnEdit);
-        buttonPanel.add(btnDelete);
-        buttonPanel.add(btnRenew);
-        buttonPanel.add(btnViewDetails);
-        buttonPanel.add(btnRefresh);
+        JPanel buttonRow2 = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
+        buttonRow2.setBackground(Color.WHITE);
+        buttonRow2.add(btnImportExcel);
+        buttonRow2.add(btnExportExcel);
+        
+        JPanel buttonPanel = new JPanel(new BorderLayout());
+        buttonPanel.setBackground(Color.WHITE);
+        buttonPanel.add(buttonRow1, BorderLayout.NORTH);
+        buttonPanel.add(buttonRow2, BorderLayout.SOUTH);
         
         JPanel topPanel = new JPanel(new BorderLayout(10, 10));
         topPanel.setBackground(Color.WHITE);
@@ -209,6 +221,8 @@ public class ReaderManagementPanel extends JPanel {
         btnRenew.addActionListener(e -> renewMembership());
         btnViewDetails.addActionListener(e -> showReaderDetails());
         btnRefresh.addActionListener(e -> loadReadersData());
+        btnImportExcel.addActionListener(e -> importReadersFromExcel());
+        btnExportExcel.addActionListener(e -> exportReadersToExcel());
     }
     
     private void loadReadersData() {
@@ -449,6 +463,114 @@ public class ReaderManagementPanel extends JPanel {
                 "Lỗi khi xem chi tiết: " + ex.getMessage(),
                 "Lỗi",
                 JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    /**
+     * Import readers from Excel file
+     */
+    private void importReadersFromExcel() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Chọn File Excel/CSV để Nhập Độc Giả");
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+            "Excel & CSV Files (*.xlsx, *.xls, *.csv)", "xlsx", "xls", "csv"));
+        
+        int result = fileChooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            try {
+                String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+                
+                // Import readers from Excel
+                List<Reader> importedReaders = com.library.util.ExcelUtil.importReadersFromExcel(filePath);
+                
+                if (importedReaders.isEmpty()) {
+                    JOptionPane.showMessageDialog(this,
+                        "Không có dữ liệu để nhập!",
+                        "Thông Báo",
+                        JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                
+                // Save readers to database
+                int successCount = 0;
+                int errorCount = 0;
+                StringBuilder errors = new StringBuilder();
+                
+                for (Reader reader : importedReaders) {
+                    try {
+                        readerDAO.upsertReader(reader);
+                        successCount++;
+                    } catch (SQLException ex) {
+                        errorCount++;
+                        errors.append("- ").append(reader.getHoTen()).append(": ").append(ex.getMessage()).append("\n");
+                    }
+                }
+                
+                // Reload data
+                loadReadersData();
+                
+                // Show result
+                String message = String.format(
+                    "Nhập thành công: %d độc giả\nLỗi: %d độc giả\n\n%s",
+                    successCount, errorCount,
+                    errorCount > 0 ? "Chi tiết lỗi:\n" + errors.toString() : ""
+                );
+                
+                JOptionPane.showMessageDialog(this,
+                    message,
+                    "Kết Quả Nhập Excel",
+                    errorCount > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
+                    
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this,
+                    "Lỗi khi nhập file Excel: " + ex.getMessage(),
+                    "Lỗi",
+                    JOptionPane.ERROR_MESSAGE);
+                ex.printStackTrace();
+            }
+        }
+    }
+    
+    /**
+     * Export readers to Excel file
+     */
+    private void exportReadersToExcel() {
+        try {
+            List<Reader> readers = readerDAO.getAllReaders();
+            
+            if (readers.isEmpty()) {
+                JOptionPane.showMessageDialog(this,
+                    "Không có dữ liệu để xuất!",
+                    "Thông Báo",
+                    JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Lưu File Excel");
+            fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Excel Files", "xlsx"));
+            fileChooser.setSelectedFile(new java.io.File("DanhSachDocGia.xlsx"));
+            
+            int result = fileChooser.showSaveDialog(this);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+                if (!filePath.endsWith(".xlsx")) {
+                    filePath += ".xlsx";
+                }
+                
+                com.library.util.ExcelUtil.exportReadersToExcel(readers, filePath);
+                
+                JOptionPane.showMessageDialog(this,
+                    "Xuất file Excel thành công!\nĐường dẫn: " + filePath,
+                    "Thành Công",
+                    JOptionPane.INFORMATION_MESSAGE);
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                "Lỗi khi xuất file Excel: " + ex.getMessage(),
+                "Lỗi",
+                JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
         }
     }
 }

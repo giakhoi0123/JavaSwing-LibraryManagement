@@ -1,11 +1,17 @@
 package com.library.dao;
 
-import com.library.model.Reader;
-import com.library.util.DBConnection;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.library.model.Reader;
+import com.library.util.DBConnection;
 
 /**
  * Data Access Object for Reader entity
@@ -121,6 +127,42 @@ public class ReaderDAO {
         String query = "INSERT INTO DOC_GIA (MaDG, HoTen, NgaySinh, GioiTinh, " +
                       "DiaChi, SoDT, Email, NgayLapThe, NgayHetHan, TrangThai) " +
                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        
+        Connection conn = dbConnection.getConnection();
+        PreparedStatement pstmt = conn.prepareStatement(query);
+        pstmt.setString(1, reader.getMaDG());
+        pstmt.setString(2, reader.getHoTen());
+        pstmt.setDate(3, reader.getNgaySinh() != null ? Date.valueOf(reader.getNgaySinh()) : null);
+        pstmt.setString(4, reader.getGioiTinh());
+        pstmt.setString(5, reader.getDiaChi());
+        pstmt.setString(6, reader.getSoDT());
+        pstmt.setString(7, reader.getEmail());
+        pstmt.setDate(8, Date.valueOf(reader.getNgayLapThe()));
+        pstmt.setDate(9, Date.valueOf(reader.getNgayHetHan()));
+        pstmt.setString(10, reader.getTrangThai());
+        
+        int result = pstmt.executeUpdate();
+        pstmt.close();
+        
+        return result > 0;
+    }
+    
+    /**
+     * Insert or update reader (upsert)
+     * If reader with same MaDG exists, update it; otherwise insert new
+     * @param reader Reader object to insert or update
+     * @return true if successful
+     */
+    public boolean upsertReader(Reader reader) throws SQLException {
+        String query = "INSERT INTO DOC_GIA (MaDG, HoTen, NgaySinh, GioiTinh, " +
+                      "DiaChi, SoDT, Email, NgayLapThe, NgayHetHan, TrangThai) " +
+                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
+                      "ON DUPLICATE KEY UPDATE " +
+                      "HoTen = VALUES(HoTen), NgaySinh = VALUES(NgaySinh), " +
+                      "GioiTinh = VALUES(GioiTinh), DiaChi = VALUES(DiaChi), " +
+                      "SoDT = VALUES(SoDT), Email = VALUES(Email), " +
+                      "NgayLapThe = VALUES(NgayLapThe), NgayHetHan = VALUES(NgayHetHan), " +
+                      "TrangThai = VALUES(TrangThai)";
         
         Connection conn = dbConnection.getConnection();
         PreparedStatement pstmt = conn.prepareStatement(query);

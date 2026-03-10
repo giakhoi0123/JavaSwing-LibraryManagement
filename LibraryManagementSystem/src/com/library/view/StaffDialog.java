@@ -317,7 +317,6 @@ public class StaffDialog extends JDialog {
         staff.setTrangThai((String) cmbTrangThai.getSelectedItem());
         
         // Save to database
-        boolean isNewStaff = (staff.getPassword() != null || !password.trim().isEmpty());
         try {
             if (staff.getMaNV() == null || staffDAO.getStaffById(staff.getMaNV()) == null) {
                 // Insert new staff
