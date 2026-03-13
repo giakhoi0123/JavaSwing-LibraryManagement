@@ -9,8 +9,11 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.sql.SQLException;
+import java.text.NumberFormat;
+import java.text.ParseException;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Fine Management Panel
@@ -254,8 +257,7 @@ public class FineManagementPanel extends JPanel {
         int modelRow = tblFines.convertRowIndexToModel(selectedRow);
         String maPP = (String) tableModel.getValueAt(modelRow, 0);
         String trangThai = (String) tableModel.getValueAt(modelRow, 8);
-        String tongTienStr = (String) tableModel.getValueAt(modelRow, 7);
-        double tongTien = Double.parseDouble(tongTienStr.replace(",", ""));
+        double tongTien = parseCurrencyAmount(tableModel.getValueAt(modelRow, 7));
         
         if ("Đã thanh toán".equals(trangThai)) {
             JOptionPane.showMessageDialog(this,
@@ -340,10 +342,10 @@ public class FineManagementPanel extends JPanel {
             double totalUnpaid = 0;
             
             for (int i = 0; i < tableModel.getRowCount(); i++) {
-                String tongTienStr = (String) tableModel.getValueAt(i, 7);
+                Object tongTienValue = tableModel.getValueAt(i, 7);
                 String trangThai = (String) tableModel.getValueAt(i, 8);
                 
-                double amount = Double.parseDouble(tongTienStr.replace(",", ""));
+                double amount = parseCurrencyAmount(tongTienValue);
                 totalAll += amount;
                 
                 if ("Đã thanh toán".equals(trangThai)) {
@@ -359,6 +361,45 @@ public class FineManagementPanel extends JPanel {
             
         } catch (Exception ex) {
             ex.printStackTrace();
+        }
+    }
+
+    private double parseCurrencyAmount(Object value) {
+        if (value == null) {
+            return 0;
+        }
+
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        }
+
+        String rawValue = value.toString().trim();
+        if (rawValue.isEmpty()) {
+            return 0;
+        }
+
+        Locale[] locales = new Locale[] {Locale.getDefault(), Locale.forLanguageTag("vi-VN"), Locale.US};
+        for (Locale locale : locales) {
+            try {
+                NumberFormat formatter = NumberFormat.getNumberInstance(locale);
+                Number parsed = formatter.parse(rawValue);
+                if (parsed != null) {
+                    return parsed.doubleValue();
+                }
+            } catch (ParseException ignored) {
+                // Try next locale.
+            }
+        }
+
+        String normalized = rawValue.replaceAll("[^\\d-]", "");
+        if (normalized.isEmpty() || "-".equals(normalized)) {
+            return 0;
+        }
+
+        try {
+            return Double.parseDouble(normalized);
+        } catch (NumberFormatException ex) {
+            return 0;
         }
     }
 }
