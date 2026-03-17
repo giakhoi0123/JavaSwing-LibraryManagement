@@ -237,20 +237,24 @@ public class BookDAO {
     }
     
     /**
-     * Delete book (soft delete - set TrangThai = 'Inactive')
+     * Delete book from database.
+     *
+     * Note: If the book already exists in borrow/return details, database
+     * foreign-key constraints will prevent deletion and SQLException is thrown.
+     *
      * @param maSach Book ID
      * @return true if successful
      */
     public boolean deleteBook(String maSach) throws SQLException {
-        String query = "UPDATE SACH SET TrangThai = 'Inactive' WHERE MaSach = ?";
-        
+        String query = "DELETE FROM SACH WHERE MaSach = ?";
+
         Connection conn = dbConnection.getConnection();
         PreparedStatement pstmt = conn.prepareStatement(query);
         pstmt.setString(1, maSach);
-        
+
         int result = pstmt.executeUpdate();
         pstmt.close();
-        
+
         return result > 0;
     }
     

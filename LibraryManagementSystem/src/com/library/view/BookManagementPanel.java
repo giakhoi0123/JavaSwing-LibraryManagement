@@ -440,15 +440,28 @@ public class BookManagementPanel extends JPanel {
         
         if (confirm == JOptionPane.YES_OPTION) {
             try {
-                bookDAO.deleteBook(maSach);
-                JOptionPane.showMessageDialog(this,
-                    "Xóa sách thành công!",
-                    "Thành Công",
-                    JOptionPane.INFORMATION_MESSAGE);
-                loadBooksData();
+                boolean deleted = bookDAO.deleteBook(maSach);
+
+                if (deleted) {
+                    JOptionPane.showMessageDialog(this,
+                        "Xóa sách thành công!",
+                        "Thành Công",
+                        JOptionPane.INFORMATION_MESSAGE);
+                    loadBooksData();
+                } else {
+                    JOptionPane.showMessageDialog(this,
+                        "Không tìm thấy sách để xóa hoặc sách đã bị xóa trước đó.",
+                        "Thông Báo",
+                        JOptionPane.WARNING_MESSAGE);
+                }
             } catch (SQLException ex) {
+                String message = ex.getMessage();
+                if (ex.getSQLState() != null && ex.getSQLState().startsWith("23")) {
+                    message = "Không thể xóa sách vì đang có dữ liệu mượn/trả liên quan.";
+                }
+
                 JOptionPane.showMessageDialog(this,
-                    "Lỗi khi xóa sách: " + ex.getMessage(),
+                    "Lỗi khi xóa sách: " + message,
                     "Lỗi",
                     JOptionPane.ERROR_MESSAGE);
             }
